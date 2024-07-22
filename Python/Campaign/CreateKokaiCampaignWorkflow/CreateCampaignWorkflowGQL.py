@@ -3,8 +3,8 @@ import pandas as pd
 import json
 import time
 
-ROOT_URL_GQL = "https://api.dev.gen.adsrvr.org/graphql"
-ROOT_URL_REST = 'https://int-api.sb.thetradedesk.com/v3/'  # Use the SB environment roots
+ROOT_URL_GQL = "https://ext-api.sb.thetradedesk.com/graphql"
+ROOT_URL_REST = 'https://ext-api.sb.thetradedesk.com/v3'  # Use the SB environment roots
 TTD_AUTH = ''
 
 
@@ -53,7 +53,7 @@ def create_kokai_campaign(advertiser_ID, seed_ID):
         newCampaignVersion = response_data['Version']  # Output new campaignVersion -> "Kokai" indicates Kokai Campaign
         budget = response_data['Budget']['Amount'] # Output that verifies it has a budget
 
-        
+
         print('New Campaign ID: ' + newCampaignId)
         print('New Campaign Version: ' + newCampaignVersion)
         print('Campaign budget amount: ' + str(budget))
@@ -66,7 +66,7 @@ def create_kokai_campaign(advertiser_ID, seed_ID):
         #
 
 def create_and_associate_adgroup(campaign_id):
-   
+
     # Create AdGroup Body
     adgroup_creation_body = {
     "CampaignId":campaign_id,
@@ -109,7 +109,7 @@ def create_and_associate_adgroup(campaign_id):
             "CurrencyCode":"USD"
         },
         "CreativeIds":[
-            
+
         ]
         #"AssociatedBidLists":[] Associate bidlists here if needed
     }
@@ -193,7 +193,7 @@ def construct_get_migration_budget_campaign_mutation(campaign_id):
                     }}
                 }}
                 }}
-            
+
         }}
     }}
     """
@@ -248,7 +248,7 @@ def construct_upgrade_to_kokai_budget_mutation(campaign_id, campaign_flight_to_a
 
     # Combine all parts into a single query string
     graphql_field = "\n".join(campaign_flights)
-   
+
 
     return f"""
     mutation {{
@@ -293,7 +293,7 @@ def construct_upgrade_to_kokai_budget_mutation(campaign_id, campaign_flight_to_a
 
 
 def get_campaign(campaign_id):
-    
+
     # Set up headers
     headers = {
         'Content-Type': 'application/json',
@@ -312,16 +312,16 @@ def get_campaign(campaign_id):
     else:
         response_data = json.loads(response.content)
 
-        budgetingVersion = response_data['BudgetingVersion'] 
-        version = response_data['Version']  
+        budgetingVersion = response_data['BudgetingVersion']
+        version = response_data['Version']
 
         return (budgetingVersion, version)
-    
+
 def start_workflow():
 
     # Specify required IDs to first create the Campaign
     advertiser_ID = ''
-    seed_ID = ''  
+    seed_ID = ''
 
     #Creates campaign
     campaign_id = create_kokai_campaign(advertiser_ID, seed_ID)

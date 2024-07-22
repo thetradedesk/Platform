@@ -3,8 +3,8 @@ import pandas as pd
 import json
 import time
 
-ROOT_URL_GQL = "https://api.dev.gen.adsrvr.org/graphql"
-ROOT_URL_REST = 'https://int-api.sb.thetradedesk.com/v3/'  # Use the SB environment roots
+ROOT_URL_GQL = "https://ext-api.sb.thetradedesk.com/graphql"
+ROOT_URL_REST = 'https://ext-api.sb.thetradedesk.com/v3'  # Use the SB environment roots
 TTD_AUTH = ''
 
 
@@ -54,7 +54,7 @@ def create_kokai_campaign(advertiser_ID, seed_ID):
         print()
         budget = response_data['Budget']['Amount'] # Output that verifies it has a budget
 
-        
+
         print('New Campaign ID: ' + newCampaignId)
         print('New Campaign Version: ' + newCampaignVersion)
         print('Campaign budget amount: '+  str(budget))
@@ -67,7 +67,7 @@ def create_kokai_campaign(advertiser_ID, seed_ID):
         #
 
 def create_and_associate_adgroup(campaign_id):
-   
+
     # Create AdGroup body
     adgroup_creation_body = {
     "CampaignId":campaign_id,
@@ -110,7 +110,7 @@ def create_and_associate_adgroup(campaign_id):
             "CurrencyCode":"USD"
         },
         "CreativeIds":[
-            
+
         ]
         #"AssociatedBidLists":[] Associate bidlists here if needed
     }
@@ -148,7 +148,7 @@ def create_and_associate_adgroup(campaign_id):
 
 
 def get_campaign(campaign_id):
-    
+
     # Set up headers
     headers = {
         'Content-Type': 'application/json',
@@ -170,19 +170,19 @@ def get_campaign(campaign_id):
         # Since Budgeting Version is only returned if it's Kokai
         budgetingVersion = ''
         try:
-            budgetingVersion = response_data['BudgetingVersion'] 
+            budgetingVersion = response_data['BudgetingVersion']
         except Exception:
             budgetingVersion = 'Solimar'
-        
-        version = response_data['Version']  
+
+        version = response_data['Version']
 
         return (budgetingVersion, version)
-    
+
 def start_workflow():
 
     # Specify required IDs to first create the Campaign
     advertiser_ID = ''
-    seed_ID = ''  
+    seed_ID = ''
 
     #Creates campaign
     campaign_id = create_kokai_campaign(advertiser_ID, seed_ID)
