@@ -68,7 +68,7 @@ def create_kokai_campaign(advertiser_ID, seed_ID):
 
 def create_and_associate_adgroup(campaign_id):
 
-    # Create AdGroup body
+    # Create ad group body
     adgroup_creation_body = {
     "CampaignId":campaign_id,
     "AdGroupName":"Strategy 1",
@@ -135,16 +135,12 @@ def create_and_associate_adgroup(campaign_id):
         exit
     else:
         response_data = json.loads(response.content)
-        newAdGroupId = response_data['AdGroupId']  # Output new adGroupId
+        newAdGroupId = response_data['AdGroupId']  # Output new ad group ID
         isEnabled = response_data['IsEnabled']
 
-        print('New AdGroup ID: ' + newAdGroupId)
-        print("This AdGroup is now " + str(isEnabled))
+        print('New ad group ID: ' + newAdGroupId)
+        print("This ad group is now " + str(isEnabled))
         return newAdGroupId
-
-        #
-        #  API AdGroup Creation Successful!
-        #
 
 
 def get_campaign(campaign_id):
@@ -187,7 +183,7 @@ def start_workflow():
     #Creates campaign
     campaign_id = create_kokai_campaign(advertiser_ID, seed_ID)
 
-    #Creates and associates adgroups with campaign id
+    #Creates and associates ad groups with campaign id
     create_and_associate_adgroup(campaign_id)
 
     #Validates

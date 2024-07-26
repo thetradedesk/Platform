@@ -67,7 +67,7 @@ def create_kokai_campaign(advertiser_ID, seed_ID):
 
 def create_and_associate_adgroup(campaign_id):
 
-    # Create AdGroup Body
+    # Create ad group Body
     adgroup_creation_body = {
     "CampaignId":campaign_id,
     "AdGroupName":"Strategy 1",
@@ -132,16 +132,12 @@ def create_and_associate_adgroup(campaign_id):
         exit
     else:
         response_data = json.loads(response.content)
-        newAdGroupId = response_data['AdGroupId']  # Output new adGroupId
+        newAdGroupId = response_data['AdGroupId']  # Output new ad group ID
         isEnabled = response_data['IsEnabled']
 
-        print("This AdGroup is now " + str(isEnabled))
-        print('New AdGroup ID: ' + newAdGroupId)
+        print("This ad group is now " + str(isEnabled))
+        print('New ad group ID: ' + newAdGroupId)
         return newAdGroupId
-
-        #
-        #  API AdGroup Creation Successful!
-        #
 
 
 def make_graphql_call(mutation):
@@ -201,7 +197,7 @@ def construct_get_migration_budget_campaign_mutation(campaign_id):
 def parse_campaign_migration_budget(migration_response):
 
     # So we need two important pieces of information under the MigrationData field from the campaign query, the original
-    # campaign flight id and the adgroup flights under that id
+    # campaign flight id and the ad group flights under that id
     campaign_id = ""
     campaign_flight_to_adgroup_flight_map = {}
     try:
@@ -218,7 +214,7 @@ def parse_campaign_migration_budget(migration_response):
 
 def construct_upgrade_to_kokai_budget_mutation(campaign_id, campaign_flight_to_adgroup_flight_map):
 
-    # Need to pass in the adgroup flights into the input
+    # Need to pass in the ad group flights into the input
     campaign_flights = []
 
     # Go through the dictionary and construct the campaignFlights input field
@@ -326,7 +322,7 @@ def start_workflow():
     #Creates campaign
     campaign_id = create_kokai_campaign(advertiser_ID, seed_ID)
 
-    #Creates and associates adgroups with campaign id
+    #Creates and associates ad groups with campaign id
     create_and_associate_adgroup(campaign_id)
 
     #Creates and calls the query to get the relevent campaign budget migration data

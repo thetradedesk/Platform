@@ -12,13 +12,13 @@ from typing import Any, List, Tuple
 # Constants
 ###########
 
-# GQL URLs
-ext_sb_gql_url = 'https://ext-api.sb.thetradedesk.com/graphql'
-prod_gql_url = 'https://desk.thetradedesk.com/graphql'
+# Define the GQL Platform API endpoint URLs.
+EXTERNAL_SB_GQL_URL = 'https://ext-api.sb.thetradedesk.com/graphql'
+PROD_GQL_URL = 'https://desk.thetradedesk.com/graphql'
 
-# REST URLs
-ext_sb_rest_url = 'https://ext-api.sb.thetradedesk.com/v3'
-prod_rest_url = 'https://api.thetradedesk.com/v3'
+# Define the REST Platform API endpoint URLs.
+EXTERNAL_SB_REST_URL = 'https://ext-api.sb.thetradedesk.com/v3'
+PROD_REST_URL = 'https://api.thetradedesk.com/v3'
 
 # Represents which REST operation to execute.
 class RestOperation(Enum):
@@ -31,10 +31,10 @@ class RestOperation(Enum):
 #############################
 
 # Define the GraphQL Platform API endpoint URL this script will use.
-gql_url = ext_sb_gql_url
+gql_url = EXTERNAL_SB_GQL_URL
 
 # Define the GraphQL Platform API endpoint URL this script will use.
-rest_url = ext_sb_rest_url
+rest_url = EXTERNAL_SB_REST_URL
 
 # Replace the placeholder value with your actual API token.
 token = 'AUTH_TOKEN_PLACEHOLDER'
@@ -63,24 +63,24 @@ max_completion_time_seconds = 60 * 10
 
 # Represents a response from the GQL server.
 class GqlResponse:
-  def __init__(self, data: dict[Any, Any], errors: List[Any]):
-    # This is where return data from the GQL operation is stored.
+  def __init__(self, data: dict[Any, Any], errors: List[Any]) -> None:
+    # This is where the return data from the GQL operation is stored.
     self.data = data
     # This is where any errors from the GQL operation are stored.
     self.errors = errors
 
-# Executes a GQL request against `gql_url`, given its body definition and accompanying variables.
-# This returns whether the call was successful, paired with the `GqlResponse` returned.
+# Executes a GQL request to the specified gql_url, using the provided body definition and associated variables.
+# This indicates if the call was successful and returns the `GqlResponse`.
 def execute_gql_request(body, variables) -> Tuple[bool, GqlResponse]:
-  # Create headers with the authorization token
+  # Create headers with the authorization token.
   headers: dict[str, str] = {
-      'TTD-Auth': token
+    'TTD-Auth': token
   }
 
   # Create a dictionary for the GraphQL request.
   data: dict[str, Any] = {
-      'query': body,
-      'variables': variables
+    'query': body,
+    'variables': variables
   }
 
   # Send the GraphQL request.
@@ -89,46 +89,46 @@ def execute_gql_request(body, variables) -> Tuple[bool, GqlResponse]:
 
   if not response.ok:
     print('GQL request failed!')
-    # Uncomment to see the verbose response to the bad request.
+    # For more verbose error messaging, uncomment the following line:
     #print(response)
 
-  # Parse any data (if it exists), otherwise return an empty dict.
+  # Parse any data if it exists, otherwise, return an empty dictionary.
   resp_data = content.get('data', {})
-  # Parse any errors (if they exist), otherwise return an empty error list.
+  # Parse any errors if they exist, otherwise, return an empty error list.
   errors = content.get('errors', [])
 
   return (response.ok, GqlResponse(resp_data, errors))
 
 # Represents a response from the REST server.
 class RestResponse:
-    def __init__(self, data: Any, errors: Any):
-        # This is where return data from the REST operation is stored.
-        self.data = data
-        # This is where any errors from the REST operation are stored.
-        self.errors = errors
+  def __init__(self, data: Any, errors: Any) -> None:
+    # This is where the data returned from the REST operation is stored.
+    self.data = data
+    # This is where any errors from the REST operation are stored.
+    self.errors = errors
 
-# Executes a REST request against `rest_url`, given its body definition and accompanying variables.
-# This returns whether the call was successful, paired with the `RestResponse` returned.
+# Executes a REST request to the specified rest_url, using the provided body definition and associated variables.
+# This indicates if the call was successful and returns the `RestResponse`.
 def execute_rest_request(operation: RestOperation, url: str, body: Any) -> Tuple[bool, RestResponse]:
-    if operation == RestOperation.GET:
-      response = requests.get(url, headers = rest_headers)
-    elif operation == RestOperation.POST:
-      response = requests.post(url, headers = rest_headers, json = body)
-    elif operation == RestOperation.PUT:
-      response = requests.put(url, headers = rest_headers, json = body)
-    else:
-      raise Exception(f'Unrecognized operatin type: {operation}')
+  if operation == RestOperation.GET:
+    response = requests.get(url, headers = rest_headers)
+  elif operation == RestOperation.POST:
+    response = requests.post(url, headers = rest_headers, json = body)
+  elif operation == RestOperation.PUT:
+    response = requests.put(url, headers = rest_headers, json = body)
+  else:
+    raise Exception(f'Unrecognized operation type: {operation}')
 
-    # Check if the response returned a 200.
-    if response.status_code != 200:
-        error_info = response.json()
-        # Uncomment for more verbose error messaging.
-        #print(error_info)
-        error_message = error_info.get('Message', 'REST call failed. No error message provided.')
-        return (False, RestResponse(None, error_message))
-    else:
-        data = response.json()
-        return (True, RestResponse(data, None))
+  # Check if the response returned a 200.
+  if response.status_code != 200:
+    error_info = response.json()
+    # For more verbose error messaging, uncomment the following line:
+    #print(error_info)
+    error_message = error_info.get('Message', 'REST call failed. No error message provided.')
+    return (False, RestResponse(None, error_message))
+  else:
+    data = response.json()
+    return (True, RestResponse(data, None))
 
 # Clones a Campaign for each given clone name. Returns the ID of the clone job that is initiated.
 def clone_campaign(campaign_id: str, clones_names: List[str]) -> List[int]:
@@ -146,7 +146,7 @@ def clone_campaign(campaign_id: str, clones_names: List[str]) -> List[int]:
 
     url = rest_url + "/campaign/clone"
 
-    # Send the GraphQL request.
+    # Send the REST request.
     request_success, response = execute_rest_request(RestOperation.POST, url, body)
 
     if request_success:
@@ -188,7 +188,7 @@ def poll_clone_jobs_until_complete(job_ids: List[int]) -> List[str]:
 
       url = rest_url + f'/campaign/clone/status/{job_id}'
 
-      # Send the GraphQL request.
+      # Send the REST request.
       request_success, response = execute_rest_request(RestOperation.GET, url, None)
 
       if not request_success:
@@ -233,22 +233,22 @@ def verify_cloned_campaigns(cloned_campaign_ids: List[str]) -> None:
   # Define the GraphQL query.
   query = """
   query VerifyCloneCampaignsAreKokai($campaignIds: [String!]!) {
-      campaigns(where: { id: { in: $campaignIds } })
-      {
-        nodes {
-          id
-          version
-          budgetMigrationStatus {
-            currentBudgetingVersion
-          }
+    campaigns(where: { id: { in: $campaignIds } })
+    {
+      nodes {
+        id
+        version
+        budgetMigrationStatus {
+          currentBudgetingVersion
         }
       }
+    }
   }
   """
 
   # Define the variables in the query.
   variables: dict[str, Any] = {
-      'campaignIds': cloned_campaign_ids
+    'campaignIds': cloned_campaign_ids
   }
 
   # Send the GraphQL request.

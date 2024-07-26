@@ -10,16 +10,16 @@ from typing import Any, List, Tuple
 # Constants
 ###########
 
-ext_sb_gql_url = 'https://ext-api.sb.thetradedesk.com/graphql'
-prod_gql_url = 'https://desk.thetradedesk.com/graphql'
-prod_azure_url = 'https://desk.dsp.walmart.com/graphql'
+# Define the GQL Platform API endpoint URLs.
+EXTERNAL_SB_GQL_URL = 'https://ext-api.sb.thetradedesk.com/graphql'
+PROD_GQL_URL = 'https://desk.thetradedesk.com/graphql'
 
 #############################
 # Variables for YOU to define
 #############################
 
 # Define the GraphQL Platform API endpoint URL this script will use.
-gql_url = ext_sb_gql_url
+gql_url = EXTERNAL_SB_GQL_URL
 
 # Replace the placeholder value with your actual API token.
 token = 'AUTH_TOKEN_PLACEHOLDER'
@@ -37,15 +37,15 @@ seed_id = ''
 # Represents a response from the GQL server.
 class GqlResponse:
   def __init__(self, data: dict[Any, Any], errors: List[Any]):
-    # This is where return data from the GQL operation is stored.
+    # This is where the return data from the GQL operation is stored.
     self.data = data
     # This is where any errors from the GQL operation are stored.
     self.errors = errors
 
-# Executes a GQL request against `gql_url`, given its body definition and accompanying variables.
-# This returns whether the call was successful, paired with the `GqlResponse` returned.
+# Executes a GQL request to the specified gql_url, using the provided body definition and associated variables.
+# This indicates if the call was successful and returns the `GqlResponse`.
 def execute_gql_request(body, variables) -> Tuple[bool, GqlResponse]:
-  # Create headers with the authorization token.
+  # Create headers with the authorization token..
   headers: dict[str, str] = {
       'TTD-Auth': token
   }
@@ -62,12 +62,12 @@ def execute_gql_request(body, variables) -> Tuple[bool, GqlResponse]:
 
   if not response.ok:
     print('GQL request failed!')
-    # Uncomment to see the verbose response to the bad request.
+    # For more verbose error messaging, uncomment the following line:
     #print(response)
 
-  # Parse any data (if it exists), otherwise return an empty dict.
+  # Parse any data if it exists, otherwise, return an empty dictionary.
   resp_data = content.get('data', {})
-  # Parse any errors (if they exist), otherwise return an empty error list.
+  # Parse any data if it exists, otherwise, return an empty error list.
   errors = content.get('errors', [])
 
   return (response.ok, GqlResponse(resp_data, errors))
@@ -77,16 +77,16 @@ def is_campaign_eligible_for_upgrade(campaign_id: str) -> bool:
   # Define the GraphQL query.
   query = """
   query GetCampaignUpgradeCandidate($campaignId: ID!) {
-      campaign(id: $campaignId) {
-          id
-          version
-      }
+    campaign(id: $campaignId) {
+      id
+      version
+    }
   }
   """
 
   # Define the variables in the query.
   variables: dict[str, str] = {
-      'campaignId': campaign_id
+    'campaignId': campaign_id
   }
 
   # Send the GraphQL request.
@@ -133,7 +133,7 @@ def upgrade_campaign(campaign_id: str, seed_id: str) -> bool:
 
   # Define the variables in the query.
   variables: dict[str, str] = {
-      'campaignId': campaign_id
+    'campaignId': campaign_id
   }
 
   if seed_id is not None:

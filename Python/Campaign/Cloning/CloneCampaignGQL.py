@@ -11,15 +11,16 @@ from typing import Any, List, Tuple
 # Constants
 ###########
 
-ext_sb_gql_url = 'https://ext-api.sb.thetradedesk.com/graphql'
-prod_gql_url = 'https://desk.thetradedesk.com/graphql'
+# Define the GQL Platform API endpoint URLs.
+EXTERNAL_SB_GQL_URL = 'https://ext-api.sb.thetradedesk.com/graphql'
+PROD_GQL_URL = 'https://desk.thetradedesk.com/graphql'
 
 #############################
 # Variables for YOU to define
 #############################
 
 # Define the GraphQL Platform API endpoint URL this script will use.
-gql_url = ext_sb_gql_url
+gql_url = EXTERNAL_SB_GQL_URL
 
 # Replace the placeholder value with your actual API token.
 token = 'AUTH_TOKEN_PLACEHOLDER'
@@ -39,24 +40,24 @@ max_completion_time_seconds = 60 * 10
 
 # Represents a response from the GQL server.
 class GqlResponse:
-  def __init__(self, data: dict[Any, Any], errors: List[Any]):
-    # This is where return data from the GQL operation is stored.
+  def __init__(self, data: dict[Any, Any], errors: List[Any]) -> None:
+    # This is where the return data from the GQL operation is stored.
     self.data = data
     # This is where any errors from the GQL operation are stored.
     self.errors = errors
 
-# Executes a GQL request against `gql_url`, given its body definition and accompanying variables.
-# This returns whether the call was successful, paired with the `GqlResponse` returned.
+# Executes a GQL request to the specified gql_url, using the provided body definition and associated variables.
+# This indicates if the call was successful and returns the `GqlResponse`.
 def execute_gql_request(body, variables) -> Tuple[bool, GqlResponse]:
-  # Create headers with the authorization token
+  # Create headers with the authorization token.
   headers: dict[str, str] = {
-      'TTD-Auth': token
+    'TTD-Auth': token
   }
 
   # Create a dictionary for the GraphQL request.
   data: dict[str, Any] = {
-      'query': body,
-      'variables': variables
+    'query': body,
+    'variables': variables
   }
 
   # Send the GraphQL request.
@@ -65,12 +66,12 @@ def execute_gql_request(body, variables) -> Tuple[bool, GqlResponse]:
 
   if not response.ok:
     print('GQL request failed!')
-    # Uncomment to see the verbose response to the bad request.
+    # For more verbose error messaging, uncomment the following line:
     #print(response)
 
-  # Parse any data (if it exists), otherwise return an empty dict.
+  # Parse any data if it exists, otherwise, return an empty dictionary.
   resp_data = content.get('data', {})
-  # Parse any errors (if they exist), otherwise return an empty error list.
+  # Parse any errors if they exist, otherwise, return an empty error list.
   errors = content.get('errors', [])
 
   return (response.ok, GqlResponse(resp_data, errors))
@@ -80,32 +81,32 @@ def clone_campaign(campaign_id: str, clones_names: List[str]) -> int:
   # Define the GraphQL query.
   query = """
   mutation CloneCampaign($campaignId: String!, $numberOfClones: Int!, $cloneNames: [String!]!) {
-      campaignClonesCreate(input: {
-        campaignCloneData: [
-          {
-            campaignId: $campaignId
-            numberOfClones: $numberOfClones
-            cloneNames: $cloneNames
-          }
-        ]
-      })
-      {
-        data {
-          id
+    campaignClonesCreate(input: {
+      campaignCloneData: [
+        {
+          campaignId: $campaignId
+          numberOfClones: $numberOfClones
+          cloneNames: $cloneNames
         }
-        userErrors {
-          field
-          message
-        }
+      ]
+    })
+    {
+      data {
+        id
       }
+      userErrors {
+        field
+        message
+      }
+    }
   }
   """
 
   # Define the variables in the query.
   variables: dict[str, Any] = {
-      'campaignId': campaign_id,
-      'numberOfClones': len(clones_names),
-      'cloneNames': clones_names
+    'campaignId': campaign_id,
+    'numberOfClones': len(clones_names),
+    'cloneNames': clones_names
   }
 
   # Send the GraphQL request.
@@ -128,26 +129,25 @@ def poll_clone_job_until_complete(job_id: int) -> List[str]:
   # Define the GraphQL query.
   query = """
   query GetCloneCampaignProgress($jobId: Long!) {
-      campaignCloneProgress(id: $jobId)
-      {
-        status
-        jobs {
-          nodes {
-            status
-            cloneInfo {
-              campaignClone {
-                id
-              }
+    campaignCloneProgress(id: $jobId) {
+      status
+      jobs {
+        nodes {
+          status
+          cloneInfo {
+            campaignClone {
+              id
             }
           }
         }
       }
+    }
   }
   """
 
   # Define the variables in the query.
   variables: dict[str, Any] = {
-      'jobId': job_id
+    'jobId': job_id
   }
 
   completion_time = 0
@@ -205,22 +205,21 @@ def verify_cloned_campaigns(cloned_campaign_ids: List[str]) -> None:
   # Define the GraphQL query.
   query = """
   query VerifyCloneCampaignsAreKokai($campaignIds: [String!]!) {
-      campaigns(where: { id: { in: $campaignIds } })
-      {
-        nodes {
-          id
-          version
-          budgetMigrationStatus {
-            currentBudgetingVersion
-          }
+    campaigns(where: { id: { in: $campaignIds } }) {
+      nodes {
+        id
+        version
+        budgetMigrationStatus {
+          currentBudgetingVersion
         }
       }
+    }
   }
   """
 
   # Define the variables in the query.
   variables: dict[str, Any] = {
-      'campaignIds': cloned_campaign_ids
+    'campaignIds': cloned_campaign_ids
   }
 
   # Send the GraphQL request.
