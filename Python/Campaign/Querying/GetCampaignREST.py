@@ -15,7 +15,7 @@ from typing import Any, List, Tuple
 EXTERNAL_SB_REST_URL = 'https://ext-desk.sb.thetradedesk.com/v3'
 PROD_REST_URL = 'https://api.thetradedesk.com/v3'
 
-# Represents which REST operation to execute.
+# Represents the REST operation to execute.
 class RestOperation(Enum):
   GET = 1
   POST = 2
@@ -52,7 +52,7 @@ class RestResponse:
     # This is where any errors from the REST operation are stored.
     self.errors = errors
 
-# Executes a REST request to the specified rest_url, using the provided body definition and associated variables.
+# Executes a REST request to the specified `rest_url` using the provided body definition and associated variables.
 # This indicates if the call was successful and returns the `RestResponse`.
 def execute_rest_request(operation: RestOperation, url: str, body: Any) -> Tuple[bool, RestResponse]:
   if operation == RestOperation.GET:

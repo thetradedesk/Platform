@@ -1,17 +1,96 @@
+##############################################################
+# This script calls REST API to create a Kokai campaign.
+##############################################################
 import requests
 import pandas as pd
 import json
 import time
+from enum import Enum
+from typing import Any, List, Tuple
 
-ROOT_URL_GQL = "https://ext-api.sb.thetradedesk.com/graphql"
-ROOT_URL_REST = 'https://ext-api.sb.thetradedesk.com/v3'  # Use the SB environment roots
-TTD_AUTH = ''
+###########
+# Constants
+###########
+
+# Define the GQL Platform API endpoint URLs.
+EXTERNAL_SB_GQL_URL = 'https://ext-api.sb.thetradedesk.com/graphql'
+PROD_GQL_URL = 'https://desk.thetradedesk.com/graphql'
+
+# Define the REST Platform API endpoint URLs.
+EXTERNAL_SB_REST_URL = 'https://ext-api.sb.thetradedesk.com/v3'
+PROD_REST_URL = 'https://api.thetradedesk.com/v3'
+
+# Represents the REST operation to execute.
+class RestOperation(Enum):
+  GET = 1
+  POST = 2
+  PUT = 3
+
+#############################
+# Variables for YOU to define
+#############################
+
+# Define the GraphQL Platform API endpoint URL this script will use.
+gql_url = EXTERNAL_SB_GQL_URL
+
+# Define the GraphQL Platform API endpoint URL this script will use.
+rest_url = EXTERNAL_SB_REST_URL
+
+# Replace the placeholder value with your actual API token.
+token = 'AUTH_TOKEN_PLACEHOLDER'
+
+# The headers to pass as part of the REST requests.
+rest_headers = {
+  "TTD-Auth": token,
+  "Content-Type": "application/json"
+}
+
+# Replace the placeholder with the ID of the advertiser you want to associate with the new campaign.
+advertiser_id = 'ADVERTISER_ID_PLACEHOLDER'
+
+# The Seed to assign to the campaign. If none is provided, defaults to the Advertiser's default Seed. One of these two must exist or be provided.
+seed_id = 'SEED_ID_PLACEHOLDER'
+
+################
+# Helper Methods
+################
+
+# Represents a response from the REST server.
+class RestResponse:
+  def __init__(self, data: Any, errors: Any) -> None:
+    # This is where the data returned from the REST operation is stored.
+    self.data = data
+    # This is where any errors from the REST operation are stored.
+    self.errors = errors
+
+# Executes a REST request to the specified `rest_url` using the provided body definition and associated variables.
+# This indicates if the call was successful and returns the `RestResponse`.
+def execute_rest_request(operation: RestOperation, url: str, body: Any) -> Tuple[bool, RestResponse]:
+  if operation == RestOperation.GET:
+    response = requests.get(url, headers = rest_headers)
+  elif operation == RestOperation.POST:
+    response = requests.post(url, headers = rest_headers, json = body)
+  elif operation == RestOperation.PUT:
+    response = requests.put(url, headers = rest_headers, json = body)
+  else:
+    raise Exception(f'Unrecognized operation type: {operation}')
+
+  # Check if the response returned a 200.
+  if response.status_code != 200:
+    error_info = response.json()
+    # For more verbose error messaging, uncomment the following line:
+    #print(error_info)
+    error_message = error_info.get('Message', 'REST call failed. No error message provided.')
+    return (False, RestResponse(None, error_message))
+  else:
+    data = response.json()
+    return (True, RestResponse(data, None))
 
 
-
+# Creates a new kokai Campaign and returns the ID.
 def create_kokai_campaign(advertiser_ID, seed_ID):
-    # Create Campaign Body
-    campaign_creation_body = {
+    # Defines the payload for calling `POST /campaign`.
+    body = {
         "AdvertiserId": advertiser_ID,
         "CampaignName": "New Kokai API Test Campaign",
         "Version": "Kokai",  # Indicates that this is a Kokai Campaign
@@ -31,164 +110,129 @@ def create_kokai_campaign(advertiser_ID, seed_ID):
         "SeedId": seed_ID  # Seed is required since there was no default seed ID on the campaign's Advertiser
     }
 
-    # Set up headers
-    headers = {
-        'Content-Type': 'application/json',
-        'TTD-Auth': TTD_AUTH
-    }
+    url = rest_url + '/campaign'
 
-    # POST /campaign Endpoint
-    constructed_url = ROOT_URL_REST + 'campaign'
-    response = requests.post(constructed_url, headers=headers, json=campaign_creation_body)
+    # Send the REST request.
+    request_success, response = execute_rest_request(RestOperation.POST, url, body)
 
-    # If call was unsuccessful, output the error
-    if not response.ok:
-        print(f"Request failed with status code: {response.status_code}")
-        print(response.text)
-        exit
-    else:
-        response_data = json.loads(response.content)
-
-        newCampaignId = response_data['CampaignId']  # Output new campaignID
-        newCampaignVersion = response_data['Version']  # Output new campaignVersion -> "Kokai" indicates Kokai Campaign
+    if request_success:
+      try:
+        newCampaignId = response.data['CampaignId']  # Output new campaignID
+        newCampaignVersion = response.data['Version']  # Output new campaignVersion -> "Kokai" indicates Kokai Campaign
         print()
-        budget = response_data['Budget']['Amount'] # Output that verifies it has a budget
-
+        budget = response.data['Budget']['Amount'] # Output that verifies it has a budget
 
         print('New Campaign ID: ' + newCampaignId)
         print('New Campaign Version: ' + newCampaignVersion)
         print('Campaign budget amount: '+  str(budget))
-        print(response_data)
+        print(response.data)
 
         return newCampaignId
+      except:
+        print(response.errors)
+        raise Exception(f"Campaign failed to create!")
+    else:
+      print(response.errors)
+      raise Exception(f"Campaign failed to create!")
 
-        #
-        #  API Campaign Creation Successful!
-        #
-
+# Creates a new ad group and returns the ID.
 def create_and_associate_adgroup(campaign_id):
 
-    # Create ad group body
-    adgroup_creation_body = {
-    "CampaignId":campaign_id,
-    "AdGroupName":"Strategy 1",
-    "IndustryCategoryId":292,
-    "AdGroupCategory":{
-        "CategoryId":8311
-    },
-    "IsEnabled": True,
-    "PredictiveClearingEnabled":True,
-    "FunnelLocation": "Awareness",
-    "RTBAttributes":{
-        "BudgetSettings": {
-            "DailyBudget": {
-                "Amount": 1,
-                "CurrencyCode": "USD"
-            },
-            "PacingMode": "PaceToEndOfDay"
+    # Defines the payload for calling `POST /adgroup`.
+    body = {
+        "CampaignId":campaign_id,
+        "AdGroupName":"Strategy 1",
+        "IndustryCategoryId":292,
+        "AdGroupCategory":{
+            "CategoryId":8311
         },
-        "ROIGoal":{
-            "CPAInAdvertiserCurrency":{
-                "Amount":0.2,
-                "CurrencyCode":"USD"
-            }
-        },
-        "AudienceTargeting":{
-            "CrossDeviceVendorListForAudience":[
-                {
-                "CrossDeviceVendorId":11,
-                "CrossDeviceVendorName":"Identity Alliance"
+        "IsEnabled": True,
+        "PredictiveClearingEnabled":True,
+        "FunnelLocation": "Awareness",
+        "RTBAttributes":{
+            "ROIGoal":{
+                "CPAInAdvertiserCurrency":{
+                    "Amount":0.2,
+                    "CurrencyCode":"USD"
                 }
+            },
+            "AudienceTargeting":{
+                "CrossDeviceVendorListForAudience":[
+                    {
+                    "CrossDeviceVendorId":11,
+                    "CrossDeviceVendorName":"Identity Alliance"
+                    }
+                ]
+            },
+            "BaseBidCPM":{
+                "Amount":1.0,
+                "CurrencyCode":"USD"
+            },
+            "MaxBidCPM":{
+                "Amount":5.0,
+                "CurrencyCode":"USD"
+            },
+            "CreativeIds":[
             ]
-        },
-        "BaseBidCPM":{
-            "Amount":1.0,
-            "CurrencyCode":"USD"
-        },
-        "MaxBidCPM":{
-            "Amount":5.0,
-            "CurrencyCode":"USD"
-        },
-        "CreativeIds":[
-
-        ]
-        #"AssociatedBidLists":[] Associate bidlists here if needed
-    }
+            #"AssociatedBidLists":[] If needed, add IDs of bid lists you want to associate with the ad group in the `AssociatedBidLists` array in the following format: `[ { "BidListId" : "id1" }, { "BidListId" : "id2" } , { "BidListId" : "id3" } ]`.
+        }
     }
 
-    # Set up headers
-    headers = {
-        'Content-Type': 'application/json',
-        'TTD-Auth': TTD_AUTH
-    }
+    url = rest_url + '/adgroup'
+    
+    # Send the REST request.
+    request_success, response = execute_rest_request(RestOperation.POST, url, body)
 
-    # POST /campaign Endpoint
-    constructed_url = ROOT_URL_REST + 'adgroup'
-    response = requests.post(constructed_url, headers=headers, json=adgroup_creation_body)
-
-
-
-    # If call was unsuccessful, output the error
-    if not response.ok:
-        print(f"Request failed with status code: {response.status_code}")
-        print(response.text)
-        exit
-    else:
-        response_data = json.loads(response.content)
-        newAdGroupId = response_data['AdGroupId']  # Output new ad group ID
-        isEnabled = response_data['IsEnabled']
+    if request_success:
+      try:
+        newAdGroupId = response.data['AdGroupId']  # Output the new ad group ID.
+        isEnabled = response.data['IsEnabled']
 
         print('New ad group ID: ' + newAdGroupId)
         print("This ad group is now " + str(isEnabled))
         return newAdGroupId
-
-
-def get_campaign(campaign_id):
-
-    # Set up headers
-    headers = {
-        'Content-Type': 'application/json',
-        'TTD-Auth': TTD_AUTH
-    }
-
-    # POST /campaign Endpoint
-    constructed_url = ROOT_URL_REST + 'campaign' + '/' + campaign_id
-    response = requests.get(constructed_url, headers=headers)
-
-    # If call was unsuccessful, output the error
-    if not response.ok:
-        print(f"Request failed with status code: {response.status_code}")
-        print(response.text)
-        exit
+      except:
+        print(response.errors)
+        raise Exception(f"Ad Group failed to create!")
     else:
-        response_data = json.loads(response.content)
+      print(response.errors)
+      raise Exception(f"Ad Group failed to create!")
 
-        # Since Budgeting Version is only returned if it's Kokai
+# Retrieves the new campaign and returns its version along with its budgeting version.
+def get_campaign(campaign_id):
+    url = rest_url + '/campaign/' + campaign_id
+
+    # Send the REST request.
+    request_success, response = execute_rest_request(RestOperation.GET, url, None)
+
+    if request_success:
+      try:
+        # Since the budgeting version is returned if it's a Kokai campaign.
         budgetingVersion = ''
         try:
-            budgetingVersion = response_data['BudgetingVersion']
+            budgetingVersion = response.data['BudgetingVersion']
         except Exception:
             budgetingVersion = 'Solimar'
 
-        version = response_data['Version']
+        version = response.data['Version']
 
         return (budgetingVersion, version)
+      except:
+        print(response.errors)
+        raise Exception(f"Campaign failed to be retrieved!")
+    else:
+      print(response.errors)
+      raise Exception(f"Campaign failed to be retrieved!")
 
-def start_workflow():
+#########################################################################################
+# Execution Flow:
+#  1. Creates new Kokai campaign.
+#  2. Creates and associates ad groups with the newly created campaign.
+#  3. Validates that the new campaign and its budgeting version are set to `Kokai`.
+#########################################################################################
+campaign_id = create_kokai_campaign(advertiser_id, seed_id)
+create_and_associate_adgroup(campaign_id)
 
-    # Specify required IDs to first create the Campaign
-    advertiser_ID = ''
-    seed_ID = ''
-
-    #Creates campaign
-    campaign_id = create_kokai_campaign(advertiser_ID, seed_ID)
-
-    #Creates and associates ad groups with campaign id
-    create_and_associate_adgroup(campaign_id)
-
-    #Validates
-    budgetingVersion, version =  get_campaign(campaign_id)
-    print("Here is the budgeting version of the campaign: " + budgetingVersion)
-    print("Here is the version of the campaign: " + version)
-
-start_workflow()
+budgetingVersion, version =  get_campaign(campaign_id)
+print("Here is the budgeting version of the campaign: " + budgetingVersion)
+print("Here is the version of the campaign: " + version)
