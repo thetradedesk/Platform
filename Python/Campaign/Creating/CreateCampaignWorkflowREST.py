@@ -176,7 +176,7 @@ def create_and_associate_adgroup(campaign_id):
             ],
             #"AssociatedBidLists":[] If needed, add IDs of bid lists you want to associate with the ad group in the `AssociatedBidLists` array in the following format: `[ { "BidListId" : "id1" }, { "BidListId" : "id2" } , { "BidListId" : "id3" } ]`.
             "KoaOptimizationSettings": {
-                "KoaDimensions": { # All Koa dimensions can be enabled/disabled in Koa V3.5. Koa V3.5 is off by default, and omitted dimensions will be disabled
+                "KoaDimensions": { # In Kokai, Koa V3.5 is off by default. You can enable Koa Optimizations for individual dimensions by including them in this object. Omitted dimensions will remain disabled.
                     "AdFormat": True,
                     "Geography": False,
                     "Site": True,
