@@ -161,7 +161,6 @@ def print_expected_campaign_data(campaign_id: str) -> None:
   query = """
   query VerifyUpgradeData($campaignId: ID!) {
       campaign(id: $campaignId) {
-        isMarketplaceEnabledByDefault
         version
         seed {
           id
@@ -179,7 +178,6 @@ def print_expected_campaign_data(campaign_id: str) -> None:
   request_success, response = execute_gql_request(query, variables)
 
   if request_success:
-    print(f"isMarketplaceEnabledByDefault: {response.data['campaign']['isMarketplaceEnabledByDefault']}")
     print(f"version: {response.data['campaign']['version']}")
     print(f"seedId: {response.data['campaign']['seed']['id']}")
 
