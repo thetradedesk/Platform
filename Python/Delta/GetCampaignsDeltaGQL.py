@@ -173,6 +173,7 @@ def get_campaigns_delta(advertiser_ids: list[str], change_tracking_version: int)
       }
     ) {
       nextChangeTrackingVersion
+      moreAvailable
       campaigns {
         advertiser {
           id
@@ -250,29 +251,36 @@ advertiser_chunks = [advertiser_ids[i:i + advertisers_chunk_size] for i in range
 
 i = 0
 for chunk in advertiser_chunks:
+  more_available = True
+  next_page_minimum_tracking_version = minimum_tracking_version
+  
   print(f'Processing chunk {i}')
-  chunk_start_time = time.time();
+  chunk_start_time = time.time()
   i += 1
-
+  while (more_available):
   # Get campaigns for this chunk of advertisers.
-  data = get_campaigns_delta(chunk, minimum_tracking_version)
+    data = get_campaigns_delta(chunk, next_page_minimum_tracking_version)
 
-  for campaign in data['campaigns']:
-    changed_campaigns_list.append(campaign)
+    for campaign in data['campaigns']:
+      changed_campaigns_list.append(campaign)
 
-  # Ensure that we capture next change tracking version if we do not have it yet.
-  if next_change_tracking_version == 0:
-    next_change_tracking_version = data['nextChangeTrackingVersion']
+    more_available = data['moreAvailable']
+    next_page_minimum_tracking_version = data['nextChangeTrackingVersion']
 
-  chunk_end_time = time.time();
+    # Ensure that we capture the maximum next change tracking version to report at the end of this.
+    # Only do this once we have gone through all the pages of campaigns for this advertiser
+    if not more_available:
+      next_change_tracking_version = max(next_change_tracking_version, data['nextChangeTrackingVersion'])
+
+  chunk_end_time = time.time()
   log_timing('Chunk processing time', chunk_start_time, chunk_end_time)
 
 # All done.
 end_time = time.time()
 
 # Output data.
-print();
+print()
 print('Output data:')
 print(f'Next minimum change tracking version: {next_change_tracking_version}')
 print(f'Changed campaigns count: {len(changed_campaigns_list)}')
-log_timing('Total processing time', start_time, end_time);
+log_timing('Total processing time', start_time, end_time)

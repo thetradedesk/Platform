@@ -164,6 +164,7 @@ def get_tracking_tag_delta(advertiser_ids: list[str], change_tracking_version: i
       }
     ) {
       nextChangeTrackingVersion
+      moreAvailable
       trackingTags {
         id
         name
@@ -225,21 +226,29 @@ advertiser_chunks = [advertiser_ids[i:i + 100] for i in range(0, len(advertiser_
 
 i = 0
 for chunk in advertiser_chunks:
+  more_available = True
+  next_page_minimum_tracking_version = minimum_tracking_version
+
   print(f'Processing chunk {i}')
   i += 1
 
-  # Get tracking tags for this chunk of advertisers.
-  data = get_tracking_tag_delta(chunk, minimum_tracking_version)
+  while (more_available):
+    # Get tracking tags for this chunk of advertisers.
+    data = get_tracking_tag_delta(chunk, next_page_minimum_tracking_version)
 
-  for trackingTag in data['trackingTags']:
-    changed_tracking_tags_list.append(trackingTag)
+    for trackingTag in data['trackingTags']:
+      changed_tracking_tags_list.append(trackingTag)
 
-  # Ensure that we capture next change tracking version if we do not have it yet.
-  if next_change_tracking_version == 0:
-    next_change_tracking_version = data['nextChangeTrackingVersion']
+    more_available = data['moreAvailable']
+    next_page_minimum_tracking_version = data['nextChangeTrackingVersion']
+
+    # Ensure that we capture the maximum next change tracking version to report at the end of this.
+    # Only do this once we have gone through all the pages of tracking tags for this advertiser
+    if not more_available:
+      next_change_tracking_version = max(next_change_tracking_version, data['nextChangeTrackingVersion'])
 
 # Output data
-print();
+print()
 print('Output data:')
 print(f'Next minimum change tracking version: {next_change_tracking_version}')
 print(f'Changed tracking tags count: {len(changed_tracking_tags_list)}')
