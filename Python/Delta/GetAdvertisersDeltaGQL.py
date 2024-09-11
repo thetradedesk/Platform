@@ -1,5 +1,5 @@
 #################################################################
-# This script will retrieve all advertisers delta for a partner.
+# This script will retrieve all advertiser deltas for a partner.
 #################################################################
 
 import json
