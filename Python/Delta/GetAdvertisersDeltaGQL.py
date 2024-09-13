@@ -28,7 +28,7 @@ token = 'AUTH_TOKEN_PLACEHOLDER'
 # Partner ID to retrive data for.
 target_partner_id = 'PARTNER_ID_PLACEHOLDER'
 
-# The minimum tracking version to start queying with. If 0, the current minimum tracking version will be fetched.
+# The minimum (earliest) change-tracking version to start querying with. If 0, the current minimum change-tracking version will be fetched.
 starting_minimum_tracking_version = 0
 
 #############################
@@ -38,7 +38,7 @@ starting_minimum_tracking_version = 0
 # This is the tracking version for the next iteration of fetching data.
 next_change_tracking_version = 0
 
-# A list holding the advertisers that have been updated and should be processed by your system.
+# The list of advertisers that have been updated and should be processed by your system.
 changed_advertisers_list = []
 
 ################
@@ -90,7 +90,7 @@ def log_timing(text:str, start_time, end_time) -> str:
   if show_timings:
     print(f'{text}: {(end_time - start_time):.2f} seconds')
 
-# A GQL query to retrieve the current minimum tracking version for a partner.
+# A GraphQL query to retrieve the current minimum (earliest) change-tracking version for a partner.
 def get_current_minimum_tracking_version(partner_id: str) -> Any:
   query = """
   query GetAdvertisersDeltaMinimumVersion($partnerIds: [ID!]!) {
@@ -119,7 +119,7 @@ def get_current_minimum_tracking_version(partner_id: str) -> Any:
   return response.data['advertiserDelta']['currentMinimumTrackingVersion']
 
 
-# A GQL query to retrieve the advertisers delta for a partner.
+# A GraphQL query to retrieve the advertisers' delta for the specified partner.
 def get_advertisers_delta(partner_id: str, change_tracking_version: int) -> Any:
   query = """
   query GetAdvertisersDelta($changeTrackingVersion: Long!, $partnerIds: [ID!]!) {
@@ -160,12 +160,12 @@ def get_advertisers_delta(partner_id: str, change_tracking_version: int) -> Any:
 
 ########################################################
 # Execution Flow:
-#  1. Get the minimum tracking version.
-#  2. Retrieve all the advertiser deltas for the particular partner.
+#  1. Get the minimum (earliest) change-tracking version.
+#  2. Retrieve all the advertiser deltas for the specified partner.
 ########################################################
 start_time = time.time()
 
-# Get the current minimum tracking version if a `starting_minimum_tracking_version` is not specified.
+# Get the minimum (earliest) change-tracking version if the `starting_minimum_tracking_version` is not specified.
 minimum_tracking_version = get_current_minimum_tracking_version(target_partner_id) if starting_minimum_tracking_version == 0 else starting_minimum_tracking_version
 print(f'Minimum tracking version: {minimum_tracking_version}')
 
@@ -185,8 +185,8 @@ while (more_available):
   more_available = data['moreAvailable']
   next_page_minimum_tracking_version = data['nextChangeTrackingVersion']
 
-  # Ensure that we capture the maximum next change tracking version to report at the end of this.
-  # Only do this once we have gone through all the pages of ad groups for this advertiser
+  # Captures the maximum (latest) change-tracking version.
+  # Do this only after you have gone through all returned pages of advertisers.
   if not more_available:
     next_change_tracking_version = max(next_change_tracking_version, data['nextChangeTrackingVersion'])
 
