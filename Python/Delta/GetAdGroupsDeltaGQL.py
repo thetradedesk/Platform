@@ -28,7 +28,7 @@ token = 'AUTH_TOKEN_PLACEHOLDER'
 # Partner ID to retrive data for.
 target_partner_id = 'PARTNER_ID_PLACEHOLDER'
 
-# The minimum tracking version to start queying with. If 0, the current minimum tracking version will be fetched.
+# The minimum (earliest) tracking version to start queying with. If 0, the current minimum tracking version will be fetched.
 starting_minimum_tracking_version = 0
 
 #############################
@@ -129,7 +129,7 @@ def get_all_advertisers(partner_id: str, cursor: str) -> Any:
   return response.data
 
 
-# A GQL query to retrieve the current minimum tracking version for an advertiser.
+# A GQL query to retrieve the current minimum (earliest) tracking version for an advertiser.
 def get_current_minimum_tracking_version(advertiser_id: str) -> Any:
   query = """
   query GetAdGroupsDeltaMinimumVersion($advertiserIds: [ID!]!) {
@@ -173,6 +173,7 @@ def get_adgroups_delta(advertiser_ids: list[str], change_tracking_version: int) 
       }
     ) {
       nextChangeTrackingVersion
+      moreAvailable
       adGroups {
         id
         name
@@ -212,7 +213,7 @@ def get_adgroups_delta(advertiser_ids: list[str], change_tracking_version: int) 
 ########################################################
 # Execution Flow:
 #  1. Retrieve advertisers IDs (limit to advertisers_chunk_size at a time).
-#  2. Get the minimum tracking version.
+#  2. Get the minimum (earliest) tracking version.
 #  3. Retrieve all the adGroup deltas.
 ########################################################
 advertiser_ids = []
@@ -235,7 +236,7 @@ while has_next:
 
 print(f'Number of advertiserIds: {len(advertiser_ids)}')
 
-# Get the current minimum tracking version if a `starting_minimum_tracking_version` is not specified.
+# Get the current minimum (earliest) tracking version if a `starting_minimum_tracking_version` is not specified.
 minimum_tracking_version = get_current_minimum_tracking_version(advertiser_ids[0]) if starting_minimum_tracking_version == 0 else starting_minimum_tracking_version
 print(f'Minimum tracking version: {minimum_tracking_version}')
 
@@ -244,29 +245,35 @@ advertiser_chunks = [advertiser_ids[i:i + advertisers_chunk_size] for i in range
 
 i = 0
 for chunk in advertiser_chunks:
+  more_available = True
+  next_page_minimum_tracking_version = minimum_tracking_version
   print(f'Processing chunk {i}')
-  chunk_start_time = time.time();
+  chunk_start_time = time.time()
   i += 1
+  while (more_available):
+    # Retrieves the ad groups for this chunk of advertisers.
+    data = get_adgroups_delta(chunk, next_page_minimum_tracking_version)
 
-  # Get adGroups for this chunk of advertisers.
-  data = get_adgroups_delta(chunk, minimum_tracking_version)
+    for adGroup in data['adGroups']:
+      changed_adgroups_list.append(adGroup)
 
-  for adGroup in data['adGroups']:
-    changed_adgroups_list.append(adGroup)
+    more_available = data['moreAvailable']
+    next_page_minimum_tracking_version = data['nextChangeTrackingVersion']
 
-  # Ensure that we capture next change tracking version if we do not have it yet.
-  if next_change_tracking_version == 0:
-    next_change_tracking_version = data['nextChangeTrackingVersion']
+    # Captures the maximum (latest) change-tracking version.
+    # Do this only after you have gone through all pages of ad groups for this advertiser.
+    if not more_available:
+      next_change_tracking_version = max(next_change_tracking_version, data['nextChangeTrackingVersion'])
 
-  chunk_end_time = time.time();
+  chunk_end_time = time.time()
   log_timing('Chunk processing time', chunk_start_time, chunk_end_time)
 
 # All done.
 end_time = time.time()
 
 # Output data.
-print();
+print()
 print('Output data:')
 print(f'Next minimum change tracking version: {next_change_tracking_version}')
 print(f'Changed adGroups count: {len(changed_adgroups_list)}')
-log_timing('Total processing time', start_time, end_time);
+log_timing('Total processing time', start_time, end_time)

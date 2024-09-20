@@ -27,7 +27,7 @@ token = 'AUTH_TOKEN_PLACEHOLDER'
 # Partner ID to retrive data for.
 target_partner_id = 'PARTNER_ID_PLACEHOLDER'
 
-# The minimum tracking version to start queying with. If 0, the current minimum tracking version will be fetched.
+# The minimum (earliest) tracking version to start queying with. If 0, the current minimum tracking version will be fetched.
 starting_minimum_tracking_version = 0
 
 #############################
@@ -120,7 +120,7 @@ def get_all_advertisers(partner_id: str, cursor: str) -> Any:
   return response.data
 
 
-# A GQL query to retrieve the current minimum tracking version for an advertiser.
+# A GQL query to retrieve the current minimum (earliest) tracking version for an advertiser.
 def get_current_minimum_tracking_version(advertiser_id: str) -> Any:
   query = """
   query GetTrackingTagDelta($advertiserIds: [ID!]!) {
@@ -164,6 +164,7 @@ def get_tracking_tag_delta(advertiser_ids: list[str], change_tracking_version: i
       }
     ) {
       nextChangeTrackingVersion
+      moreAvailable
       trackingTags {
         id
         name
@@ -195,7 +196,7 @@ def get_tracking_tag_delta(advertiser_ids: list[str], change_tracking_version: i
 ########################################################
 # Execution Flow:
 #  1. Retrieve advertisers IDs (limit to 100 at a time).
-#  2. Get the minimum tracking version.
+#  2. Get the minimum (earliest) tracking version.
 #  3. Retrieve all the tracking tag deltas.
 ########################################################
 advertiser_ids = []
@@ -216,7 +217,7 @@ while has_next:
 
 print(f'Number of advertiserIds: {len(advertiser_ids)}')
 
-# Get the current minimum tracking version if a `starting_minimum_tracking_version` is not specified.
+# Get the current minimum (earliest) tracking version if a `starting_minimum_tracking_version` is not specified.
 minimum_tracking_version = get_current_minimum_tracking_version(advertiser_ids[0]) if starting_minimum_tracking_version == 0 else starting_minimum_tracking_version
 print(f'Minimum tracking version: {minimum_tracking_version}')
 
@@ -225,21 +226,29 @@ advertiser_chunks = [advertiser_ids[i:i + 100] for i in range(0, len(advertiser_
 
 i = 0
 for chunk in advertiser_chunks:
+  more_available = True
+  next_page_minimum_tracking_version = minimum_tracking_version
+
   print(f'Processing chunk {i}')
   i += 1
 
-  # Get tracking tags for this chunk of advertisers.
-  data = get_tracking_tag_delta(chunk, minimum_tracking_version)
+  while (more_available):
+    # Retrieves the tracking tags for this chunk of advertisers.
+    data = get_tracking_tag_delta(chunk, next_page_minimum_tracking_version)
 
-  for trackingTag in data['trackingTags']:
-    changed_tracking_tags_list.append(trackingTag)
+    for trackingTag in data['trackingTags']:
+      changed_tracking_tags_list.append(trackingTag)
 
-  # Ensure that we capture next change tracking version if we do not have it yet.
-  if next_change_tracking_version == 0:
-    next_change_tracking_version = data['nextChangeTrackingVersion']
+    more_available = data['moreAvailable']
+    next_page_minimum_tracking_version = data['nextChangeTrackingVersion']
+
+    # Captures the maximum (latest) change-tracking version.
+    # Do this only after you have gone through all returned pages of tracking tags for this advertiser.
+    if not more_available:
+      next_change_tracking_version = max(next_change_tracking_version, data['nextChangeTrackingVersion'])
 
 # Output data
-print();
+print()
 print('Output data:')
 print(f'Next minimum change tracking version: {next_change_tracking_version}')
 print(f'Changed tracking tags count: {len(changed_tracking_tags_list)}')
