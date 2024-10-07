@@ -225,6 +225,7 @@ print(f'Minimum tracking version: {minimum_tracking_version}')
 advertiser_chunks = [advertiser_ids[i:i + 100] for i in range(0, len(advertiser_ids), 100)]
 
 i = 0
+first_advertiser = True
 for chunk in advertiser_chunks:
   more_available = True
   next_page_minimum_tracking_version = minimum_tracking_version
@@ -244,8 +245,9 @@ for chunk in advertiser_chunks:
 
     # Captures the maximum (latest) change-tracking version.
     # Do this at the end of the first advertiser we finish going through.
-    if not more_available and next_change_tracking_version == 0:
+    if not more_available and first_advertiser:
       next_change_tracking_version = data['nextChangeTrackingVersion']
+      first_advertiser = False
 
 # Output data
 print()
