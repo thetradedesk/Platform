@@ -261,9 +261,9 @@ for chunk in advertiser_chunks:
     next_page_minimum_tracking_version = data['nextChangeTrackingVersion']
 
     # Captures the maximum (latest) change-tracking version.
-    # Do this only after you have gone through all pages of ad groups for this advertiser.
-    if not more_available:
-      next_change_tracking_version = max(next_change_tracking_version, data['nextChangeTrackingVersion'])
+    # Do this at the end of the first advertiser we finish going through.
+    if not more_available and next_change_tracking_version == 0:
+      next_change_tracking_version = data['nextChangeTrackingVersion']
 
   chunk_end_time = time.time()
   log_timing('Chunk processing time', chunk_start_time, chunk_end_time)
