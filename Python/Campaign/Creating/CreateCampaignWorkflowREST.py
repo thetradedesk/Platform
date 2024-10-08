@@ -149,6 +149,7 @@ def create_and_associate_adgroup(campaign_id):
         "IsEnabled": True,
         "PredictiveClearingEnabled":True,
         "FunnelLocation": "Awareness",
+        "ChannelId": "Video",
         "RTBAttributes":{
             "ROIGoal":{
                 "CPAInAdvertiserCurrency":{
