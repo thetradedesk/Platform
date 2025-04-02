@@ -101,7 +101,7 @@ def create_campaigns_jsonl(advertiser_id: str) -> str:
 
     campaigns += json.dumps(campaign)
 
-    return campaigns
+  return campaigns
 
 # Retrieves an upload URL and file ID used to upload the JSON file.
 def request_upload() -> Tuple[str, str]:
@@ -114,7 +114,7 @@ def request_upload() -> Tuple[str, str]:
   }"""
 
   # Send the GraphQL request.
-  request_success, response = execute_gql_request(query)
+  request_success, response = execute_gql_request(query, None)
 
   if not request_success:
      print(response.errors)
@@ -126,7 +126,12 @@ def request_upload() -> Tuple[str, str]:
 
 # Uploads the JSONL file to the upload URL.
 def upload_file(contents: str, upload_url: str) -> None:
-  response = requests.put(url=upload_url, data=contents)
+  # Create required header for sandbox - https://partner.thetradedesk.com/v3/portal/api/doc/GqlBulkOperations#url
+  if gql_url.startswith('https://ext-api.sb.thetradedesk.com'):
+    headers: dict[str, str] = {"x-ms-blob-type": "BlockBlob"}
+  else:
+    headers: dict[str, str] = {}
+  response = requests.put(url=upload_url, data=contents, headers=headers)
   if not response.ok:
     print(f"Request failed with status code: {response.status_code}")
     print(response.text)
@@ -187,7 +192,7 @@ def query_job_progress(job_id: str) -> Tuple[str, str]:
 
   if not request_success:
     print(response.errors)
-    raise Exception('Job porgress could not be queried.')
+    raise Exception('Job progress could not be queried.')
 
   status = response.data['jobProgress']['jobStatus']
   validationErrors = response.data['jobProgress']['validationErrors']
