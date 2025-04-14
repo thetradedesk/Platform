@@ -20,16 +20,16 @@ PROD_GQL_URL = 'https://desk.thetradedesk.com/graphql'
 #############################
 
 # Define the GraphQL Platform API endpoint URL this script will use.
-gql_url = EXTERNAL_SB_GQL_URL
+gql_url = 'https://api.test.gen.adsrvr.org/graphql' #EXTERNAL_SB_GQL_URL
 
 # Replace the placeholder value with your actual API token.
-token = 'TOKEN_PLACEHOLDER'
+token = 'JyXPOF9dGSXNsq4+sUw5YBPAzZVtdBfwUyiFp4QNkIR5ehoFlbQ/8+kwqGSYflrT' #TOKEN_PLACEHOLDER'
 
 # Replace the placeholder with the ID of the advertiser you want to query first party data for.
-advertiser_id = 'ADVERTISER_ID_PLACEHOLDER'
+advertiser_id = 'xjagv7s' #'ADVERTISER_ID_PLACEHOLDER'
 
 # Replace the placerholder with a name filter you'd like to filter the return set on.
-name_filter = 'NAME_PLACEHOLDER'
+name_filter = 'a' #'NAME_PLACEHOLDER'
 
 ################
 # Helper Methods
@@ -176,10 +176,21 @@ def query_advertiser_first_party_data() -> None:
         print('Query job failed with errors:')
         print(response.data['bulkJob']['gqlErrors'])
       else:
-        print(f'Data can be accessed at: {url}')
+        download_output_file(url)
 
       return
 
+# Downloads a given URL to a local file.
+def download_output_file(url: str):
+  local_filename = 'fpd.json'
+
+  with requests.get(url, stream=True) as r:
+      r.raise_for_status()
+      with open(local_filename, 'wb') as f:
+          for chunk in r.iter_content(chunk_size=8192):
+              f.write(chunk)
+
+  print(f"Downloaded 1PD to file: {local_filename}")
 
 ###########################################################
 # Execution Flow:
