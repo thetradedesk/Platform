@@ -103,7 +103,7 @@ def create_advertiser_first_party_data_job() -> str:
       }}
     ) {{
       errors {{
-        ... on InSchemaError {{
+        ... on MutationError {{
           message
           field
         }}
