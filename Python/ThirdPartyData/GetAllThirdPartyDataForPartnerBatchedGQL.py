@@ -71,33 +71,69 @@ def execute_gql_request(body, variables) -> Tuple[bool, GqlResponse]:
   return (response.ok, GqlResponse(resp_data, errors))
 
 
+# Retrieves all third party data providers a user has access to.
+def get_user_third_party_data_provider_ids() -> set[Any]:
+  query = """
+  query GetThirdPartyDataProviders($partnerId: ID!) {
+    partner(id: $partnerId) {
+      thirdPartyDataProviders {
+        nodes {
+          id
+        }
+      }
+    }
+  }"""
+
+  variables = {"partnerId": partner_id}
+
+  print(f"\nRetrieving all provider IDs for: {partner_id}")
+
+  # Send the GraphQL request.
+  request_success, response = execute_gql_request(query, variables)
+
+  if not request_success:
+    print(response.errors)
+    raise Exception("Failed to fetch providers.")
+
+  # Extract provider IDs and deduplicate them
+  nodes = response.data["partner"]["thirdPartyDataProviders"]["nodes"]
+  provider_ids = {
+      node["id"]
+      for node in nodes
+      if node.get("id")  # Check if thirdPartyDataproviderId exists
+  }
+
+  print(f"Total partner provider IDs: {len(provider_ids)}")
+
+  return provider_ids
+
 # Schedules a query job to retrieve the partner's third party data. This returns the ID for the created job.
-def create_partner_third_party_data_job() -> str:
+def create_partner_third_party_data_job(provider_id: str) -> str:
   query = f'''query {{
     partner(id: "{partner_id}") {{
-      thirdPartyData {{
+      thirdPartyData(where: {{ provider: {{ id: {{ eq: "{provider_id}" }} }} }}) {{
         nodes {{
-            id
-            name
-            providerId
-            providerElementId
-            description
-            allowCustomFullPath
-            buyable
-            dataAllianceExcluded
-            defaultSortScore
-            fullPath
-            hierarchyString
-            activeUniques {{
-                idsCount
-                householdCount
-                idsConnectedTvCount
-                idsInAppCount
-                idsWebCount
-                personsCount
-                thirdPartyDataOverlapCount
-                lastUpdated
-            }}
+          id
+          name
+          providerId
+          providerElementId
+          description
+          allowCustomFullPath
+          buyable
+          dataAllianceExcluded
+          defaultSortScore
+          fullPath
+          hierarchyString
+          activeUniques {{
+            idsCount
+            householdCount
+            idsConnectedTvCount
+            idsInAppCount
+            idsWebCount
+            personsCount
+            thirdPartyDataOverlapCount
+            lastUpdated
+          }}
         }}
       }}
     }}
@@ -148,57 +184,74 @@ def create_partner_third_party_data_job() -> str:
 
 # Queries a given Partner's third party data and prints the result file URL.
 def query_partner_third_party_data() -> None:
-  job_id = create_partner_third_party_data_job()
-  status_query = f"""query GetBulkJobStatus {{
-    bulkJob(id: "{job_id}") {{
+  provider_list = get_user_third_party_data_provider_ids()
+  cur_item = 0
+  total_items = len(provider_list)
+
+  for provider_id in provider_list:
+    cur_item += 1
+    job_id = create_partner_third_party_data_job(provider_id)
+
+    status_query = f"""query GetBulkJobStatus {{
+      bulkJob(id: "{job_id}") {{
         id
         status
         url
         gqlErrors
-    }}
-  }}"""
-  should_poll = True
+      }}
+    }}"""
+    should_poll = True
 
-  print('Waiting on data retrieval job...')
+    print(f'Waiting on data retrieval job for provider {cur_item}/{total_items}...')
 
-  while should_poll:
-    time.sleep(5)
+    while should_poll:
+      time.sleep(2)
 
-    # Check the job state.
-    request_success, response = execute_gql_request(status_query, {})
+      # Check the job state.
+      request_success, response = execute_gql_request(status_query, {})
 
-    if not request_success:
-      print(response.errors)
-      raise Exception('Failed to query 3PD retrieval job.')
+      if not request_success:
+        print(response.errors)
+        raise Exception('Failed to query 3PD retrieval job.')
 
-    status = response.data['bulkJob']['status']
-    should_poll = status == 'QUEUED' or status == 'IN_PROGRESS'
+      status = response.data['bulkJob']['status']
+      should_poll = status == 'QUEUED' or status == 'IN_PROGRESS'
 
-    # If the job completed:
-    #   - In the case of success, print the URL.
-    #   _ In the case of failure, print the errors.
-    if not should_poll:
-      url = response.data['bulkJob']['url']
+      # If the job completed:
+      #   - In the case of success, print the URL.
+      #   _ In the case of failure, print the errors.
+      if not should_poll:
+        url = response.data['bulkJob']['url']
 
-      if not url:
-        print('Query job failed with errors:')
-        print(response.data['bulkJob']['gqlErrors'])
-      else:
-        download_output_file(url)
+        if not url:
+          print('Query job failed with errors:')
+          print(response.data['bulkJob']['gqlErrors'])
+        else:
+          download_output_file(url)
 
-      return
+        break
+
+  print('Downloaded 3PD to file tpd.jsonl')
 
 # Downloads a given URL to a local file.
 def download_output_file(url: str):
-  local_filename = 'tpd.json'
+  local_filename = 'tpd.jsonl'
 
-  with requests.get(url, stream=True) as r:
-      r.raise_for_status()
-      with open(local_filename, 'wb') as f:
-          for chunk in r.iter_content(chunk_size=8192):
-              f.write(chunk)
+  # Download and parse JSON result.
+  response = requests.get(url)
+  response.raise_for_status()
+  json_data = response.json()
 
-  print(f"Downloaded 1PD to file: {local_filename}")
+  # Extract node data.
+  nodes = json_data.get("data", {}) \
+            .get("partner", {}) \
+            .get("thirdPartyData", {}) \
+            .get("nodes", [])
+
+  # Append each node as a line.
+  with open(local_filename, 'a', encoding='utf-8') as f:
+    for node in nodes:
+      f.write(json.dumps(node) + '\n')
 
 ###########################################################
 # Execution Flow:
