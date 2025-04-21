@@ -205,7 +205,7 @@ def query_partner_third_party_data() -> None:
     print(f'Waiting on data retrieval job for provider {cur_item}/{total_items}...')
 
     while should_poll:
-      time.sleep(2)
+      time.sleep(10)
 
       # Check the job state.
       request_success, response = execute_gql_request(status_query, {})
