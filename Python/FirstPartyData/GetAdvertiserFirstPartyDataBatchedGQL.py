@@ -156,15 +156,18 @@ def query_advertiser_first_party_data() -> None:
   while should_poll:
     time.sleep(5)
 
-    # Check the job state.
-    request_success, response = execute_gql_request(status_query, {})
+    try:
+      # Check the job state.
+      request_success, response = execute_gql_request(status_query, {})
 
-    if not request_success:
-      print(response.errors)
-      raise Exception('Failed to query 1PD retrieval job.')
-
-    status = response.data['bulkJob']['status']
-    should_poll = status == 'QUEUED' or status == 'IN_PROGRESS'
+      if not request_success:
+          print(f'Failed to query 1PD retrieval job. Will retry. {response.errors}')
+          should_poll = True
+      else:
+        status = response.data['bulkJob']['status']
+        should_poll = status == 'QUEUED' or status == 'IN_PROGRESS'
+    except:
+      should_poll = True
 
     # If the job completed:
     #   - In the case of success, print the URL.
