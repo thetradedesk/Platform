@@ -190,7 +190,20 @@ def query_partner_third_party_data() -> None:
 
   for provider_id in provider_list:
     cur_item += 1
-    job_id = create_partner_third_party_data_job(provider_id)
+    job_id = None
+    failedJobQueryCount = 0
+
+    while job_id is None:
+      try:
+        job_id = create_partner_third_party_data_job(provider_id)
+      except Exception as e:
+        print('Error creating bulk job, retrying...')
+        failedJobQueryCount += 1
+
+      if failedJobQueryCount > 5:
+        print('Failed to create job too many times. Exiting.')
+        print(e)
+        raise Exception('Failed to create 3PD retrieval job.')
 
     status_query = f"""query GetBulkJobStatus {{
       bulkJob(id: "{job_id}") {{
@@ -201,6 +214,7 @@ def query_partner_third_party_data() -> None:
       }}
     }}"""
     should_poll = True
+    failedStatusCheckCount = 0
 
     print(f'Waiting on data retrieval job for provider {cur_item}/{total_items}...')
 
@@ -210,15 +224,22 @@ def query_partner_third_party_data() -> None:
       try:
         # Check the job state.
         request_success, response = execute_gql_request(status_query, {})
+        failedStatusCheckCount = 0
 
         if not request_success:
-          print(f'Failed to query 3PD retrieval job. Will retry. {response.errors}')
+          print('Failed to query 3PD retrieval job. Will retry.')
           should_poll = True
+          failedStatusCheckCount += 1
         else:
           status = response.data['bulkJob']['status']
           should_poll = status == 'QUEUED' or status == 'IN_PROGRESS'
       except:
         should_poll = True
+        failedStatusCheckCount += 1
+
+      if failedStatusCheckCount > 5:
+        print('Failed to check job status too many times. Exiting.')
+        raise Exception('Failed to query 3PD retrieval job.')
 
       # If the job completed:
       #   - In the case of success, print the URL.

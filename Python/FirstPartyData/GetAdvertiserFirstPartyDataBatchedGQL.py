@@ -140,7 +140,21 @@ def create_advertiser_first_party_data_job() -> str:
 
 # Queries a given Advertiser's first party data and prints the result file URL.
 def query_advertiser_first_party_data() -> None:
-  job_id = create_advertiser_first_party_data_job()
+  job_id = None
+  failedJobQueryCount = 0
+
+  while job_id is None:
+    try:
+      job_id = create_advertiser_first_party_data_job()
+    except Exception as e:
+      print('Error creating bulk job, retrying...')
+      failedJobQueryCount += 1
+
+    if failedJobQueryCount > 5:
+      print('Failed to create job too many times. Exiting.')
+      print(e)
+      raise Exception('Failed to create 1PD retrieval job.')
+
   status_query = f"""query GetBulkJobStatus {{
     bulkJob(id: "{job_id}") {{
         id
@@ -150,6 +164,7 @@ def query_advertiser_first_party_data() -> None:
     }}
   }}"""
   should_poll = True
+  failedStatusCheckCount = 0
 
   print('Waiting on data retrieval job...')
 
@@ -159,15 +174,22 @@ def query_advertiser_first_party_data() -> None:
     try:
       # Check the job state.
       request_success, response = execute_gql_request(status_query, {})
+      failedStatusCheckCount = 0
 
       if not request_success:
           print(f'Failed to query 1PD retrieval job. Will retry. {response.errors}')
           should_poll = True
+          failedStatusCheckCount += 1
       else:
         status = response.data['bulkJob']['status']
         should_poll = status == 'QUEUED' or status == 'IN_PROGRESS'
     except:
       should_poll = True
+      failedStatusCheckCount += 1
+
+    if failedStatusCheckCount > 5:
+      print('Failed to check job status too many times. Exiting.')
+      raise Exception('Failed to query 1PD retrieval job.')
 
     # If the job completed:
     #   - In the case of success, print the URL.
