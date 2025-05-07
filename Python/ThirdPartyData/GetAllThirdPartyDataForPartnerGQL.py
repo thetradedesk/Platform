@@ -222,12 +222,8 @@ def get_partner_third_party_data(partner_id, third_party_data_count, partitioned
                     providerId
                     providerElementId
                     description
-                    allowCustomFullPath
                     buyable
-                    dataAllianceExcluded
-                    defaultSortScore
                     fullPath
-                    hierarchyString
                     activeUniques {{
                         idsCount
                         householdCount

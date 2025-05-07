@@ -118,12 +118,8 @@ def create_partner_third_party_data_job(provider_id: str) -> str:
           providerId
           providerElementId
           description
-          allowCustomFullPath
           buyable
-          dataAllianceExcluded
-          defaultSortScore
           fullPath
-          hierarchyString
           activeUniques {{
             idsCount
             householdCount
