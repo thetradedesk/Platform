@@ -90,12 +90,8 @@ def create_partner_third_party_data_job_with_callback() -> None:
           providerId
           providerElementId
           description
-          allowCustomFullPath
           buyable
-          dataAllianceExcluded
-          defaultSortScore
           fullPath
-          hierarchyString
           activeUniques {{
             idsCount
             householdCount
