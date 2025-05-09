@@ -219,6 +219,7 @@ def get_partner_third_party_data(partner_id, third_party_data_count, partitioned
                 nodes {{
                     id
                     name
+                    idBrandId
                     providerId
                     providerElementId
                     description

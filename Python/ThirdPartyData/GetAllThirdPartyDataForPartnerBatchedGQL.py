@@ -114,6 +114,7 @@ def create_partner_third_party_data_job(provider_id: str) -> str:
       thirdPartyData(where: {{ provider: {{ id: {{ eq: "{provider_id}" }} }} }}) {{
         nodes {{
           id
+          idBrandId
           name
           providerId
           providerElementId

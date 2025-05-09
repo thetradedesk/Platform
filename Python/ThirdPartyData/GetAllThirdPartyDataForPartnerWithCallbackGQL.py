@@ -87,6 +87,7 @@ def create_partner_third_party_data_job_with_callback() -> None:
         nodes {{
           id
           name
+          idBrandId
           providerId
           providerElementId
           description
