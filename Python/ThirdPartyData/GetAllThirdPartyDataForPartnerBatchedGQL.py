@@ -34,46 +34,46 @@ partner_id = 'PARTNER_ID_PLACEHOLDER'
 
 # Represents a response from the GQL server.
 class GqlResponse:
-  def __init__(self, data: dict[Any, Any], errors: List[Any]) -> None:
-    # This is where the return data from the GQL operation is stored.
-    self.data = data
-    # This is where any errors from the GQL operation are stored.
-    self.errors = errors
+    def __init__(self, data: dict[Any, Any], errors: List[Any]) -> None:
+        # This is where the return data from the GQL operation is stored.
+        self.data = data
+        # This is where any errors from the GQL operation are stored.
+        self.errors = errors
 
 # Executes a GQL request to the specified gql_url, using the provided body definition and associated variables.
 # This indicates if the call was successful and returns the `GqlResponse`.
 def execute_gql_request(body, variables) -> Tuple[bool, GqlResponse]:
-  # Create headers with the authorization token.
-  headers: dict[str, str] = {
-    'TTD-Auth': token
-  }
+    # Create headers with the authorization token.
+    headers: dict[str, str] = {
+        'TTD-Auth': token
+    }
 
-  # Create a dictionary for the GraphQL request.
-  data: dict[str, Any] = {
-    'query': body,
-    'variables': variables
-  }
+    # Create a dictionary for the GraphQL request.
+    data: dict[str, Any] = {
+        'query': body,
+        'variables': variables
+    }
 
-  # Send the GraphQL request.
-  response = requests.post(url=gql_url, json=data, headers=headers)
-  content = json.loads(response.content) if len(response.content) > 0 else {}
+    # Send the GraphQL request.
+    response = requests.post(url=gql_url, json=data, headers=headers)
+    content = json.loads(response.content) if len(response.content) > 0 else {}
 
-  if not response.ok:
-    print('GQL request failed!')
-    # For more verbose error messaging, uncomment the following line:
-    #print(response)
+    if not response.ok:
+        print('GQL request failed!')
+        # For more verbose error messaging, uncomment the following line:
+        #print(response)
 
-  # Parse any data if it exists, otherwise, return an empty dictionary.
-  resp_data = content.get('data', {})
-  # Parse any errors if they exist, otherwise, return an empty error list.
-  errors = content.get('errors', [])
+    # Parse any data if it exists, otherwise, return an empty dictionary.
+    resp_data = content.get('data', {})
+    # Parse any errors if they exist, otherwise, return an empty error list.
+    errors = content.get('errors', [])
 
-  return (response.ok, GqlResponse(resp_data, errors))
+    return (response.ok, GqlResponse(resp_data, errors))
 
 
 # Retrieves all third party data providers a user has access to.
 def get_user_third_party_data_provider_ids() -> set[Any]:
-  query = """
+    query = """
   query GetThirdPartyDataProviders($partnerId: ID!) {
     partner(id: $partnerId) {
       thirdPartyDataProviders {
@@ -84,32 +84,32 @@ def get_user_third_party_data_provider_ids() -> set[Any]:
     }
   }"""
 
-  variables = {"partnerId": partner_id}
+    variables = {"partnerId": partner_id}
 
-  print(f"\nRetrieving all provider IDs for: {partner_id}")
+    print(f"\nRetrieving all provider IDs for: {partner_id}")
 
-  # Send the GraphQL request.
-  request_success, response = execute_gql_request(query, variables)
+    # Send the GraphQL request.
+    request_success, response = execute_gql_request(query, variables)
 
-  if not request_success:
-    print(response.errors)
-    raise Exception("Failed to fetch providers.")
+    if not request_success:
+        print(response.errors)
+        raise Exception("Failed to fetch providers.")
 
-  # Extract provider IDs and deduplicate them
-  nodes = response.data["partner"]["thirdPartyDataProviders"]["nodes"]
-  provider_ids = {
-      node["id"]
-      for node in nodes
-      if node.get("id")  # Check if thirdPartyDataproviderId exists
-  }
+    # Extract provider IDs and deduplicate them
+    nodes = response.data["partner"]["thirdPartyDataProviders"]["nodes"]
+    provider_ids = {
+        node["id"]
+        for node in nodes
+        if node.get("id")  # Check if thirdPartyDataproviderId exists
+    }
 
-  print(f"Total partner provider IDs: {len(provider_ids)}")
+    print(f"Total partner provider IDs: {len(provider_ids)}")
 
-  return provider_ids
+    return provider_ids
 
 # Schedules a query job to retrieve the partner's third party data. This returns the ID for the created job.
 def create_partner_third_party_data_job(provider_id: str) -> str:
-  query = f'''query {{
+    query = f'''query {{
     partner(id: "{partner_id}") {{
       thirdPartyData(where: {{ provider: {{ id: {{ eq: "{provider_id}" }} }} }}) {{
         nodes {{
@@ -120,6 +120,17 @@ def create_partner_third_party_data_job(provider_id: str) -> str:
           description
           buyable
           fullPath
+          dataRate {{
+            rateAmount
+            secondaryRateAmount
+            currencyCodeId
+            dataRateType {{
+              name
+            }}
+          }}
+          cpmRateAmount
+          cpmRateAmountInPartnerCurrency
+          percentOfMediaCostRateAmount
           activeUniques {{
             idsCount
             householdCount
@@ -135,7 +146,7 @@ def create_partner_third_party_data_job(provider_id: str) -> str:
     }}
   }}'''
 
-  jobQuery = f'''
+    jobQuery = f'''
   mutation CreatePartnerThirdPartyDataBulkQuery {{
     createQueryBulk(
       input: {{
@@ -159,49 +170,49 @@ def create_partner_third_party_data_job(provider_id: str) -> str:
     }}
   }}'''
 
-  # Send the GraphQL request.
-  request_success, response = execute_gql_request(jobQuery, {})
+    # Send the GraphQL request.
+    request_success, response = execute_gql_request(jobQuery, {})
 
-  if not request_success:
-    print(response.errors)
-    raise Exception('Failed to schedule 3PD retrieval job.')
+    if not request_success:
+        print(response.errors)
+        raise Exception('Failed to schedule 3PD retrieval job.')
 
-  try:
-    id = response.data['createQueryBulk']['data']['id']
+    try:
+        id = response.data['createQueryBulk']['data']['id']
 
-    if not id:
-      print(response.errors)
-      raise('Could not create query job.')
-  except:
-    print(response.errors)
-    raise('Could not create query job.')
+        if not id:
+            print(response.errors)
+            raise('Could not create query job.')
+    except:
+        print(response.errors)
+        raise('Could not create query job.')
 
-  return id
+    return id
 
 # Queries a given Partner's third party data and prints the result file URL.
 def query_partner_third_party_data() -> None:
-  provider_list = get_user_third_party_data_provider_ids()
-  cur_item = 0
-  total_items = len(provider_list)
+    provider_list = get_user_third_party_data_provider_ids()
+    cur_item = 0
+    total_items = len(provider_list)
 
-  for provider_id in provider_list:
-    cur_item += 1
-    job_id = None
-    failedJobQueryCount = 0
+    for provider_id in provider_list:
+        cur_item += 1
+        job_id = None
+        failedJobQueryCount = 0
 
-    while job_id is None:
-      try:
-        job_id = create_partner_third_party_data_job(provider_id)
-      except Exception as e:
-        print('Error creating bulk job, retrying...')
-        failedJobQueryCount += 1
+        while job_id is None:
+            try:
+                job_id = create_partner_third_party_data_job(provider_id)
+            except Exception as e:
+                print('Error creating bulk job, retrying...')
+                failedJobQueryCount += 1
 
-      if failedJobQueryCount > 5:
-        print('Failed to create job too many times. Exiting.')
-        print(e)
-        raise Exception('Failed to create 3PD retrieval job.')
+            if failedJobQueryCount > 5:
+                print('Failed to create job too many times. Exiting.')
+                print(e)
+                raise Exception('Failed to create 3PD retrieval job.')
 
-    status_query = f"""query GetBulkJobStatus {{
+        status_query = f"""query GetBulkJobStatus {{
       bulkJob(id: "{job_id}") {{
         id
         status
@@ -209,69 +220,69 @@ def query_partner_third_party_data() -> None:
         gqlErrors
       }}
     }}"""
-    should_poll = True
-    failedStatusCheckCount = 0
-
-    print(f'Waiting on data retrieval job for provider {cur_item}/{total_items}...')
-
-    while should_poll:
-      time.sleep(10)
-
-      try:
-        # Check the job state.
-        request_success, response = execute_gql_request(status_query, {})
+        should_poll = True
         failedStatusCheckCount = 0
 
-        if not request_success:
-          print('Failed to query 3PD retrieval job. Will retry.')
-          should_poll = True
-          failedStatusCheckCount += 1
-        else:
-          status = response.data['bulkJob']['status']
-          should_poll = status == 'QUEUED' or status == 'IN_PROGRESS'
-      except:
-        should_poll = True
-        failedStatusCheckCount += 1
+        print(f'Waiting on data retrieval job for provider {cur_item}/{total_items}...')
 
-      if failedStatusCheckCount > 5:
-        print('Failed to check job status too many times. Exiting.')
-        raise Exception('Failed to query 3PD retrieval job.')
+        while should_poll:
+            time.sleep(10)
 
-      # If the job completed:
-      #   - In the case of success, print the URL.
-      #   _ In the case of failure, print the errors.
-      if not should_poll:
-        url = response.data['bulkJob']['url']
+            try:
+                # Check the job state.
+                request_success, response = execute_gql_request(status_query, {})
+                failedStatusCheckCount = 0
 
-        if not url:
-          print('Query job failed with errors:')
-          print(response.data['bulkJob']['gqlErrors'])
-        else:
-          download_output_file(url)
+                if not request_success:
+                    print('Failed to query 3PD retrieval job. Will retry.')
+                    should_poll = True
+                    failedStatusCheckCount += 1
+                else:
+                    status = response.data['bulkJob']['status']
+                    should_poll = status == 'QUEUED' or status == 'IN_PROGRESS'
+            except:
+                should_poll = True
+                failedStatusCheckCount += 1
 
-        break
+            if failedStatusCheckCount > 5:
+                print('Failed to check job status too many times. Exiting.')
+                raise Exception('Failed to query 3PD retrieval job.')
 
-  print('Downloaded 3PD to file tpd.jsonl')
+            # If the job completed:
+            #   - In the case of success, print the URL.
+            #   _ In the case of failure, print the errors.
+            if not should_poll:
+                url = response.data['bulkJob']['url']
+
+                if not url:
+                    print('Query job failed with errors:')
+                    print(response.data['bulkJob']['gqlErrors'])
+                else:
+                    download_output_file(url)
+
+                break
+
+    print('Downloaded 3PD to file tpd.jsonl')
 
 # Downloads a given URL to a local file.
 def download_output_file(url: str):
-  local_filename = 'tpd.jsonl'
+    local_filename = 'tpd.jsonl'
 
-  # Download and parse JSON result.
-  response = requests.get(url)
-  response.raise_for_status()
-  json_data = response.json()
+    # Download and parse JSON result.
+    response = requests.get(url)
+    response.raise_for_status()
+    json_data = response.json()
 
-  # Extract node data.
-  nodes = json_data.get("data", {}) \
-            .get("partner", {}) \
-            .get("thirdPartyData", {}) \
-            .get("nodes", [])
+    # Extract node data.
+    nodes = json_data.get("data", {}) \
+        .get("partner", {}) \
+        .get("thirdPartyData", {}) \
+        .get("nodes", [])
 
-  # Append each node as a line.
-  with open(local_filename, 'a', encoding='utf-8') as f:
-    for node in nodes:
-      f.write(json.dumps(node) + '\n')
+    # Append each node as a line.
+    with open(local_filename, 'a', encoding='utf-8') as f:
+        for node in nodes:
+            f.write(json.dumps(node) + '\n')
 
 ###########################################################
 # Execution Flow:
