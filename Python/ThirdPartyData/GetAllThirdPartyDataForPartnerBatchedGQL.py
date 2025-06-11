@@ -111,7 +111,7 @@ def get_user_third_party_data_provider_ids() -> set[Any]:
 def create_partner_third_party_data_job(provider_id: str) -> str:
     query = f'''query {{
     partner(id: "{partner_id}") {{
-      thirdPartyData(where: {{ provider: {{ id: {{ eq: "{provider_id}" }} }} }}) {{
+      thirdPartyDataExpanded(where: {{ provider: {{ id: {{ eq: "{provider_id}" }} }} }}) {{
         nodes {{
           id
           name
