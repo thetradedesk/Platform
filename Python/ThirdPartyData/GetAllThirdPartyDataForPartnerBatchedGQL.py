@@ -276,7 +276,7 @@ def download_output_file(url: str):
     # Extract node data.
     nodes = json_data.get("data", {}) \
         .get("partner", {}) \
-        .get("thirdPartyData", {}) \
+        .get("thirdPartyDataExpanded", {}) \
         .get("nodes", [])
 
     # Append each node as a line.
